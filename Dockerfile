@@ -98,8 +98,8 @@ RUN curl -fsSL https://byterover.dev/install.sh | sh
 
 ENV PATH="/root/.local/bin:/opt/foundry/bin:/opt/venv/bin:${PATH}" \
   PYTHONUNBUFFERED=1 \
-  HERMES_HOME=/data/.hermes \
-  HOME=/data
+  HERMES_HOME=/app/.cache/.hermes \
+HOME=/app/.cache
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /opt/hermes-agent /opt/hermes-agent
