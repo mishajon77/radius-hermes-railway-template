@@ -524,6 +524,11 @@ else
   echo "[bootstrap] BYTEROVER_API_KEY not set and BYTEROVER_LOCAL not enabled — skipping ByteRover setup."
 fi
 
+# === AGANT remote MCP (re-applied on every boot) ===
+if ! python3 /app/scripts/configure_mcp.py; then
+  echo "[bootstrap] WARNING: AGANT MCP setup failed; bot is continuing." >&2
+fi
+
 # === bundled plugins: ensure plugins and their toolsets are enabled in config.yaml ===
 echo "[bootstrap] Discovering bundled plugins and plugin toolsets..."
 python3 - <<'PYEOF'
