@@ -32,7 +32,7 @@ RUN python /tmp/patch_hermes_dependencies.py /opt/hermes-agent
 # Upstream's messaging extra requests discord.py[voice], whose PyNaCl<1.6
 # constraint is unsafe and requires uv-only overrides. This pip-based image
 # installs the same chat adapters without optional Discord voice dependencies.
-RUN pip install --no-cache-dir -e "/opt/hermes-agent[cron,pty]" \
+RUN pip install --no-cache-dir -e "/opt/hermes-agent[cron,pty,mcp]" \
   -r /tmp/agent-server-requirements.txt \
   -r /tmp/messaging-requirements.txt \
   && pip check
@@ -107,6 +107,7 @@ COPY --from=builder /opt/hermes-agent /opt/hermes-agent
 WORKDIR /app
 COPY VERSION /app/VERSION
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
+COPY scripts/configure_mcp.py /app/scripts/configure_mcp.py
 RUN sed -i 's/\r$//' /app/scripts/entrypoint.sh && chmod +x /app/scripts/entrypoint.sh
 
 COPY scripts/godaddy /app/scripts/godaddy
