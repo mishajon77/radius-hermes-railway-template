@@ -99,6 +99,43 @@ def main():
             },
         }
 
+    # Context7's public endpoint works with low anonymous rate limits.
+    # A dedicated key can be supplied via hosting Variables for higher limits.
+    if os.environ.get("AGANT_MCP_CONTEXT7", "true").strip().lower() in TRUTHY:
+        context7 = {
+            "url": "https://mcp.context7.com/mcp",
+            "enabled": True,
+            "tools": {
+                "include": ["resolve-library-id", "query-docs"],
+                "resources": False,
+                "prompts": False,
+            },
+        }
+        if os.environ.get("AGANT_MCP_CONTEXT7_API_KEY", "").strip():
+            # Hermes interpolates this from the process environment at load time.
+            # No secret value is serialized to config.yaml or committed to Git.
+            context7["headers"] = {
+                "Authorization": "Bearer ${AGANT_MCP_CONTEXT7_API_KEY}"
+            }
+        desired[PREFIX + "context7"] = context7
+
+    # Never silently reuse the bot's possibly privileged existing GITHUB_TOKEN.
+    # Activate only when a separate, least-privileged PAT is provided.
+    if (
+        os.environ.get("AGANT_MCP_GITHUB_TOKEN", "").strip()
+        and os.environ.get("AGANT_MCP_GITHUB", "true").strip().lower() in TRUTHY
+    ):
+        desired[PREFIX + "github"] = {
+            "url": "https://api.githubcopilot.com/mcp/readonly",
+            "enabled": True,
+            "headers": {
+                "Authorization": "Bearer ${AGANT_MCP_GITHUB_TOKEN}",
+                "X-MCP-Readonly": "true",
+                "X-MCP-Toolsets": "repos,issues,pull_requests",
+            },
+            "tools": {"resources": False, "prompts": False},
+        }
+
     previous = read_json(STATE, [])
     if not isinstance(previous, list):
         previous = []
