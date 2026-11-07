@@ -41,8 +41,8 @@ def parse_custom_servers():
     for name, details in parsed.items():
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
             raise ValueError("MCP server names must be lowercase letters, digits, _ or -")
-        if name == "deepwiki":
-            raise ValueError("'deepwiki' is reserved for the built-in test connection")
+        if name in {"deepwiki", "context7", "github"}:
+            raise ValueError(f"{name!r} is reserved for AGANT built-in MCP servers")
         if not isinstance(details, dict):
             raise ValueError(f"MCP server {name}: expected an object")
         url = details.get("url", "")
