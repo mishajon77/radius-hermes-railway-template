@@ -93,6 +93,13 @@ class MCPBootstrapTests(unittest.TestCase):
         )
         self.assertNotIn("agant_github", self.names())
 
+    def test_reserved_builtin_names_cannot_be_overridden(self):
+        for name in ("deepwiki", "context7", "github"):
+            custom = json.dumps({name: {"url": "https://other.example/mcp"}})
+            self.assertNotEqual(
+                self.run_bootstrap(AGANT_MCP_SERVERS_JSON=custom).returncode, 0
+            )
+
     def test_invalid_url_keeps_previous_config(self):
         self.assertEqual(self.run_bootstrap().returncode, 0)
         before = self.file.read_bytes()
