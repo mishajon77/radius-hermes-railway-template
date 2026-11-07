@@ -41,8 +41,8 @@ def parse_custom_servers():
     for name, details in parsed.items():
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
             raise ValueError("MCP server names must be lowercase letters, digits, _ or -")
-        if name == "deepwiki":
-            raise ValueError("'deepwiki' is reserved for the built-in test connection")
+        if name in {"deepwiki", "context7", "github"}:
+            raise ValueError(f"{name!r} is reserved for AGANT built-in MCP servers")
         if not isinstance(details, dict):
             raise ValueError(f"MCP server {name}: expected an object")
         url = details.get("url", "")
@@ -97,6 +97,43 @@ def main():
                 "resources": False,
                 "prompts": False,
             },
+        }
+
+    # Context7's public endpoint works with low anonymous rate limits.
+    # A dedicated key can be supplied via hosting Variables for higher limits.
+    if os.environ.get("AGANT_MCP_CONTEXT7", "true").strip().lower() in TRUTHY:
+        context7 = {
+            "url": "https://mcp.context7.com/mcp",
+            "enabled": True,
+            "tools": {
+                "include": ["resolve-library-id", "query-docs"],
+                "resources": False,
+                "prompts": False,
+            },
+        }
+        if os.environ.get("AGANT_MCP_CONTEXT7_API_KEY", "").strip():
+            # Hermes interpolates this from the process environment at load time.
+            # No secret value is serialized to config.yaml or committed to Git.
+            context7["headers"] = {
+                "Authorization": "Bearer ${AGANT_MCP_CONTEXT7_API_KEY}"
+            }
+        desired[PREFIX + "context7"] = context7
+
+    # Never silently reuse the bot's possibly privileged existing GITHUB_TOKEN.
+    # Activate only when a separate, least-privileged PAT is provided.
+    if (
+        os.environ.get("AGANT_MCP_GITHUB_TOKEN", "").strip()
+        and os.environ.get("AGANT_MCP_GITHUB", "true").strip().lower() in TRUTHY
+    ):
+        desired[PREFIX + "github"] = {
+            "url": "https://api.githubcopilot.com/mcp/readonly",
+            "enabled": True,
+            "headers": {
+                "Authorization": "Bearer ${AGANT_MCP_GITHUB_TOKEN}",
+                "X-MCP-Readonly": "true",
+                "X-MCP-Toolsets": "repos,issues,pull_requests",
+            },
+            "tools": {"resources": False, "prompts": False},
         }
 
     previous = read_json(STATE, [])

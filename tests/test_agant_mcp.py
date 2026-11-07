@@ -28,8 +28,12 @@ class MCPBootstrapTests(unittest.TestCase):
 
     def run_bootstrap(self, **settings):
         env = os.environ.copy()
-        env.pop("AGANT_MCP_SERVERS_JSON", None)
-        env.pop("AGANT_MCP_DEEPWIKI", None)
+        for key in (
+            "AGANT_MCP_SERVERS_JSON", "AGANT_MCP_DEEPWIKI",
+            "AGANT_MCP_CONTEXT7", "AGANT_MCP_CONTEXT7_API_KEY",
+            "AGANT_MCP_GITHUB", "AGANT_MCP_GITHUB_TOKEN",
+        ):
+            env.pop(key, None)
         env.update({"HERMES_HOME": str(self.home), **settings})
         return subprocess.run(
             [sys.executable, str(SCRIPT)], env=env,
@@ -41,15 +45,60 @@ class MCPBootstrapTests(unittest.TestCase):
 
     def test_default_and_disable(self):
         self.assertEqual(self.run_bootstrap().returncode, 0)
-        self.assertEqual(self.names(), {"agant_deepwiki", "existing"})
+        self.assertEqual(self.names(), {"agant_deepwiki", "agant_context7", "existing"})
         self.assertEqual(self.run_bootstrap(AGANT_MCP_DEEPWIKI="false").returncode, 0)
+        self.assertEqual(self.names(), {"agant_context7", "existing"})
+        self.assertEqual(self.run_bootstrap(AGANT_MCP_DEEPWIKI="false", AGANT_MCP_CONTEXT7="false").returncode, 0)
         self.assertEqual(self.names(), {"existing"})
 
     def test_custom_server(self):
         settings = json.dumps({"docs": {"url": "https://docs.example/mcp"}})
         self.assertEqual(self.run_bootstrap(AGANT_MCP_SERVERS_JSON=settings).returncode, 0)
-        self.assertEqual(self.names(), {"agant_deepwiki", "agant_docs", "existing"})
+        self.assertEqual(self.names(), {"agant_deepwiki", "agant_context7", "agant_docs", "existing"})
         self.assertEqual(yaml.safe_load(self.file.read_text(encoding="utf-8"))["model"], "some-model")
+
+    def test_context7_uses_env_reference_not_embedded_key(self):
+        secret = "test-context7-key-do-not-serialize"
+        result = self.run_bootstrap(AGANT_MCP_CONTEXT7_API_KEY=secret)
+        self.assertEqual(result.returncode, 0)
+        text = self.file.read_text(encoding="utf-8")
+        self.assertNotIn(secret, text)
+        self.assertNotIn(secret, result.stdout + result.stderr)
+        config = yaml.safe_load(text)
+        self.assertEqual(
+            config["mcp_servers"]["agant_context7"]["headers"]["Authorization"],
+            "Bearer ${AGANT_MCP_CONTEXT7_API_KEY}",
+        )
+        self.assertEqual(
+            config["mcp_servers"]["agant_context7"]["tools"]["include"],
+            ["resolve-library-id", "query-docs"],
+        )
+
+    def test_github_requires_separate_token_and_stays_readonly(self):
+        self.assertEqual(self.run_bootstrap().returncode, 0)
+        self.assertNotIn("agant_github", self.names())
+        secret = "test-github-pat-do-not-serialize"
+        result = self.run_bootstrap(AGANT_MCP_GITHUB_TOKEN=secret)
+        self.assertEqual(result.returncode, 0)
+        config = yaml.safe_load(self.file.read_text(encoding="utf-8"))
+        github = config["mcp_servers"]["agant_github"]
+        self.assertEqual(github["url"], "https://api.githubcopilot.com/mcp/readonly")
+        self.assertEqual(github["headers"]["X-MCP-Readonly"], "true")
+        self.assertEqual(github["headers"]["X-MCP-Toolsets"], "repos,issues,pull_requests")
+        self.assertEqual(github["headers"]["Authorization"], "Bearer ${AGANT_MCP_GITHUB_TOKEN}")
+        self.assertNotIn(secret, self.file.read_text(encoding="utf-8"))
+        self.assertNotIn(secret, result.stdout + result.stderr)
+        self.assertEqual(
+            self.run_bootstrap(AGANT_MCP_GITHUB_TOKEN=secret, AGANT_MCP_GITHUB="false").returncode, 0
+        )
+        self.assertNotIn("agant_github", self.names())
+
+    def test_reserved_builtin_names_cannot_be_overridden(self):
+        for name in ("deepwiki", "context7", "github"):
+            custom = json.dumps({name: {"url": "https://other.example/mcp"}})
+            self.assertNotEqual(
+                self.run_bootstrap(AGANT_MCP_SERVERS_JSON=custom).returncode, 0
+            )
 
     def test_invalid_url_keeps_previous_config(self):
         self.assertEqual(self.run_bootstrap().returncode, 0)
