@@ -1,0 +1,7 @@
+name: agant-newsroom
+version: "1.0.0"
+description: "Opt-in Persian Telegram drafts, revisions and owner-approved publication"
+provides_tools:
+  - newsroom_draft
+toolsets:
+  - agant-newsroom
