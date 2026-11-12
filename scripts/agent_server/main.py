@@ -75,6 +75,7 @@ from radius_cli import radius_home, wallet_balance
 from security_headers import apply_browser_security_headers, wallet_explorer_link
 from url_utils import get_base_url
 from version import VERSION
+from x_radar.web import install as install_x_radar, shutdown as shutdown_x_radar
 
 configure_logging()
 logger = logging.getLogger("agent-server")
@@ -1254,7 +1255,12 @@ async def lifespan(app: FastAPI):
             skill.get("name") for skill in vendored_manifest.get("skills", [])
         ],
     )
-    yield
+    radar = app.state.x_radar
+    radar_task = asyncio.create_task(radar.loop(), name="agant-x-radar") if radar else None
+    try:
+        yield
+    finally:
+        await shutdown_x_radar(radar, radar_task)
     if _a2a_session_worker:
         _a2a_session_worker.cancel()
         try:
@@ -1266,6 +1272,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None)
+app.state.x_radar = install_x_radar(app)
 
 
 @app.exception_handler(x402_seller.PaymentRequired)

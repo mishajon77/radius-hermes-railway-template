@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>رادار ایکس | آگانت</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main id="login" class="login" hidden>
+    <form id="login-form" class="panel login-form">
+      <p class="brand" lang="en" dir="ltr">AGANT</p>
+      <h1>رادار ایکس</h1>
+      <label>رمز پنل<input type="password" name="password" autocomplete="current-password" required maxlength="256"></label>
+      <button class="primary" type="submit">ورود به رادار</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </main>
+  <div class="shell" id="shell" hidden>
+    <aside class="rail">
+      <div class="identity"><span class="brand" lang="en" dir="ltr">AGANT</span><span>رادار ایکس</span></div>
+      <nav aria-label="صفحه‌های رادار">
+        <a href="#dashboard">داشبورد</a>
+        <a href="#settings">تنظیمات</a>
+      </nav>
+      <button class="exit" type="button" data-action="logout">خروج از پنل</button>
+    </aside>
+    <main class="content">
+      <header class="toolbar">
+        <h1 id="title">داشبورد</h1>
+        <button class="primary" id="scan" type="button" data-action="scan">بررسی الان</button>
+      </header>
+      <p id="notice" role="status" aria-live="polite" hidden></p>
+      <section id="dashboard" class="stack">
+        <div id="scan-status" class="metrics"></div>
+        <section class="panel">
+          <div class="row">
+            <h2>کامنت‌ها و پست‌های جدید</h2>
+            <div class="actions" id="filters" aria-label="نوع پست">
+              <button type="button" data-action="filter" data-kind="" aria-pressed="true">همه</button>
+              <button type="button" data-action="filter" data-kind="comment" aria-pressed="false">کامنت‌های من</button>
+              <button type="button" data-action="filter" data-kind="smart" aria-pressed="false">لیست SMART</button>
+            </div>
+          </div>
+          <div id="inbox" class="cards"></div>
+          <div class="actions pager" id="pager" hidden>
+            <button type="button" data-action="page" data-step="-1">صفحهٔ قبل</button>
+            <button type="button" data-action="page" data-step="1">صفحهٔ بعد</button>
+          </div>
+        </section>
+        <details class="panel">
+          <summary>ساخت پیش‌نویس با لینک پست</summary>
+          <form id="draft-form" class="form">
+            <label>لینک پست X<input type="url" dir="ltr" name="url" placeholder="https://x.com/…" required maxlength="300"></label>
+            <button type="submit">ساخت پیش‌نویس</button>
+          </form>
+          <div id="draft-result" aria-live="polite"></div>
+        </details>
+      </section>
+      <section id="settings" class="stack" hidden>
+        <form class="panel stack" id="monitor-form">
+          <h2>حساب و لیست رصد</h2>
+          <label>نام کاربری خودت در X
+            <input name="owner" dir="ltr" placeholder="@username" maxlength="120">
+          </label>
+          <label>لینک لیست عمومی SMART در X
+            <input name="smart_list" dir="ltr" placeholder="https://x.com/i/lists/…" maxlength="200">
+            <span class="muted">برای لیست بزرگ، هر صفحه با یک درخواست سورسا دریافت می‌شود.</span>
+          </label>
+          <label>نام‌های کاربری SMART
+            <textarea name="smart_handles" dir="ltr" placeholder="@username" maxlength="120000"></textarea>
+            <span class="muted">هر نام در یک خط یا جداشده با ویرگول. لینک پروفایل هم پذیرفته می‌شود.</span>
+          </label>
+          <div class="grid">
+            <label>فاصلهٔ بررسی به دقیقه<input type="number" name="interval" min="3" max="1440" required></label>
+            <label>سقف درخواست سورسا در روز<input type="number" name="daily_limit" min="1" max="50000" required></label>
+          </div>
+          <label class="check"><input type="checkbox" name="scheduled"> رصد زمان‌بندی‌شده</label>
+          <label class="check"><input type="checkbox" name="telegram_enabled"> پیام خصوصی از همین بات تلگرام</label>
+          <p class="muted" id="telegram-status"></p>
+          <label>آدرس HTTPS پنل برای دستور تلگرام<input name="public_url" type="url" dir="ltr" maxlength="500"></label>
+          <div class="row"><button class="primary" type="submit">ذخیرهٔ تنظیمات</button><p class="muted" id="usage-estimate"></p></div>
+        </form>
+        <section class="panel stack">
+          <h2>اتصال سرویس‌ها</h2>
+          <form class="form" data-key="sorsa">
+            <label>کلید سورسا <span class="muted" id="sorsa-status"></span>
+              <input type="password" dir="ltr" name="key" required maxlength="500" autocomplete="off">
+            </label>
+            <button type="submit">ذخیرهٔ کلید سورسا</button>
+          </form>
+          <form class="form" data-key="openrouter">
+            <label>کلید OpenRouter <span class="muted" id="openrouter-status"></span>
+              <input type="password" dir="ltr" name="key" required maxlength="500" autocomplete="off">
+            </label>
+            <button type="submit">ذخیرهٔ کلید OpenRouter</button>
+          </form>
+          <p class="muted">پیش‌نویس‌ها با مدل رایگان OpenRouter آماده می‌شوند.</p>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

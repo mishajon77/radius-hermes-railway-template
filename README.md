@@ -31,6 +31,10 @@ python3 -m unittest discover -s tests -p test_radius_skills_bootstrap.py -v
 
 The tests run the real boot discovery and config registration against isolated fixtures and check bundled CLI tool registration. They require no external checkout, network, wallet or credentials.
 
+## AGANT X Radar
+
+For the Persian dashboard and existing Telegram bot commands, see [the X radar setup guide](docs/agant-x-radar.md).
+
 ## What You Get
 
 - Hermes gateway running as a Railway worker
