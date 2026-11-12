@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>رادار ایکس | آگانت</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main id="login" class="login" hidden>
+    <form id="login-form" class="panel login-form">
+      <p class="brand" lang="en" dir="ltr">AGANT</p>
+      <h1>رادار ایکس</h1>
+      <p class="muted">برای دیدن حساب‌ها و هشدارهای خودت وارد شو.</p>
+      <label>رمز پنل<input type="password" name="password" autocomplete="current-password" required maxlength="256"></label>
+      <button class="primary" type="submit">ورود به رادار</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </main>
+  <div class="shell" id="shell" hidden>
+    <aside class="rail">
+      <div class="identity"><span class="brand" lang="en" dir="ltr">AGANT</span><span>رادار ایکس</span></div>
+      <nav aria-label="صفحه‌های رادار">
+        <a href="#dashboard">داشبورد</a><a href="#personal">حساب من</a>
+        <a href="#followers">فالوورها</a><a href="#compare">فالو‌بک و اشتراک</a>
+        <a href="#history">تاریخچه</a><a href="#alerts">هشدارها <span id="unread"></span></a>
+        <a href="#settings">تنظیمات</a>
+      </nav>
+      <button class="exit" data-action="logout">خروج از پنل</button>
+    </aside>
+    <main class="content">
+      <header class="toolbar"><div><h1 id="title"></h1><p id="subheading" class="muted"></p></div>
+        <div class="actions"><button data-action="refresh">به‌روزرسانی پنل</button><button class="primary" data-action="scan" data-mode="all">بررسی حساب‌ها</button></div>
+      </header>
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <div id="screen" aria-live="polite"></div>
+    </main>
+  </div>
+</body>
+</html>

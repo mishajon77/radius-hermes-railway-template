@@ -1,0 +1,99 @@
+:root {
+  --ink: #172731; --muted: #51636d; --paper: #f2f6f5; --white: #fff;
+  --line: #dce6e4; --accent: #006c65; --accent-light: #e3f3ee; --rail: #132833;
+  --error: #a32c27; --radius: 14px; --spacing: clamp(16px, 3vw, 42px);
+  font-family: Rubik, "DM Sans", Tahoma, Arial, sans-serif;
+  color: var(--ink); background: var(--paper);
+}
+* {box-sizing:border-box}
+body {margin:0; font-size:14px; line-height:1.75}
+[hidden] {display:none !important}
+a {color:var(--accent); text-underline-offset:3px}
+bdi {unicode-bidi:isolate}
+h1,h2,h3,p {margin:0}
+h1 {font-size:clamp(26px, 3.2vw, 40px); line-height:1.2; letter-spacing:-.035em}
+h2 {font-size:19px; line-height:1.5}
+h3 {font-size:16px}
+h2 + p, h3 + p {margin-top:4px}
+p {overflow-wrap:anywhere}
+button,input,select,textarea {font:inherit}
+button,.button {display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:9px; background:var(--white); color:var(--ink); padding:7px 13px; min-height:39px; cursor:pointer; text-decoration:none; line-height:1.45}
+button:hover,.button:hover {border-color:var(--accent)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible {outline:3px solid #0b8a7d; outline-offset:3px}
+button:disabled {opacity:.55; cursor:wait}
+button.primary,.button.primary {background:var(--accent); color:white; border-color:var(--accent)}
+button.primary:hover {background:#005b54}
+button.danger {color:var(--error)}
+label {display:grid; gap:5px; align-content:start; font-size:13px}
+input:not([type=checkbox]),select,textarea {width:100%; min-height:41px; padding:8px 10px; background:white; border:1px solid #cbd9d7; border-radius:8px; color:var(--ink)}
+input[dir=ltr],textarea[dir=ltr] {text-align:left}
+input[type=checkbox] {width:17px; height:17px; accent-color:var(--accent); margin:0}
+.check {display:flex; align-items:center; gap:8px; min-height:37px}
+textarea {resize:vertical; min-height:95px}
+.shell {min-height:100dvh; display:grid; grid-template-columns:224px minmax(0,1fr)}
+.rail {background:var(--rail); color:#f6fcfb; padding:24px 16px; display:flex; flex-direction:column; gap:30px}
+.identity {display:flex; align-items:center; gap:11px; font-weight:700}
+.brand {background:#b8efe0; color:#103b37; border-radius:8px; padding:3px 8px; letter-spacing:.055em; width:max-content; font-weight:850; font-family:Geist, "DM Sans", sans-serif}
+nav {display:grid; gap:5px}
+nav a {display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; color:#d4e6e9; text-decoration:none; border-radius:8px; min-height:43px}
+nav a:hover,nav a[aria-current=page] {color:#fff; background:#25424b}
+nav a[aria-current=page] {box-shadow:inset -3px 0 #8ae1c8}
+#unread:not(:empty) {font-size:12px; color:#112f30; background:#a7e7d7; padding:0 6px; border-radius:5px}
+.rail .exit {margin-top:auto; color:#e1f3f4; border-color:#38505b; background:transparent; align-self:start}
+.content {max-width:1600px; width:100%; margin:auto; margin-top:0; padding:var(--spacing)}
+.toolbar {display:flex; align-items:start; justify-content:space-between; gap:14px; margin-bottom:24px}
+.toolbar p {margin-top:6px}
+.actions {display:flex; gap:7px; flex-wrap:wrap; align-items:center}
+.muted {color:var(--muted)}
+.error {color:var(--error)}
+.panel {min-width:0; background:var(--white); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:0 3px 12px #16312b08}
+.grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+.stack {display:grid; gap:14px}
+.metrics {display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:14px}
+.metric strong {display:block; font-size:27px; line-height:1.45}
+.row {display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+.form {display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); align-items:end; margin-top:12px}
+.form button[type=submit] {justify-self:start}
+.wide {grid-column:1/-1}
+.tag {display:inline-block; border-radius:5px; background:var(--accent-light); color:#235b53; padding:1px 7px; font-size:12px}
+.separator {border:0; border-top:1px solid var(--line); margin:15px 0}
+table {width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:13px}
+th,td {padding:8px 9px; text-align:start; border-bottom:1px solid var(--line); vertical-align:middle}
+th {color:var(--muted); white-space:nowrap; background:#f6f9f8}
+tr:last-child td {border-bottom:0}
+.table {overflow-x:auto; margin-top:10px}
+table .actions {flex-wrap:nowrap}
+.empty {color:var(--muted); background:#f6f9f8; border:1px dashed var(--line); border-radius:9px; padding:13px; margin-top:10px}
+.list {list-style:none; padding:0; margin:10px 0 0; display:grid; gap:7px}
+.list li {border-top:1px solid var(--line); padding-top:7px; overflow-wrap:anywhere}
+.cards {display:grid; gap:10px; margin-top:12px}
+.alert {border:1px solid var(--line); border-radius:9px; padding:11px}
+.alert.unread {border-inline-start:4px solid var(--accent); background:#f5fbf8}
+.draft {padding:12px; background:#eff8f5; border:1px solid #d4eae4; border-radius:9px; margin-top:12px}
+.draft blockquote {margin:6px 0 10px; font-size:16px; font-weight:600}
+.result {margin-top:12px}
+details summary {cursor:pointer; font-weight:600}
+details.panel[open] summary {margin-bottom:10px}
+canvas {width:100%; height:210px; display:block; margin-top:8px}
+.small-chart {height:112px}
+#notice {padding:10px 13px; background:var(--accent-light); border:1px solid #c8e9e0; border-radius:9px; margin-bottom:14px; white-space:pre-line}
+#notice.error {background:#fff0ed; border-color:#edc6c1}
+.login {min-height:100dvh; display:grid; place-items:center; padding:22px}
+.login-form {max-width:400px; width:100%; padding:26px; display:grid; gap:13px}
+.login-form button {width:100%}
+.login-form .error:empty {display:none}
+@media(max-width:1000px) {
+  .shell {grid-template-columns:172px minmax(0,1fr)}
+  .grid {grid-template-columns:minmax(0,1fr)}
+  .toolbar {flex-wrap:wrap}
+}
+@media(max-width:680px) {
+  .shell {display:block}
+  .rail {padding:12px; gap:9px}
+  .rail .exit {align-self:end}
+  nav {display:flex; flex-wrap:wrap; gap:4px}
+  nav a {padding:7px 9px; min-height:36px; font-size:12px}
+  .metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .panel {padding:13px}
+  .toolbar {margin-bottom:14px}
+}
