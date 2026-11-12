@@ -2,7 +2,6 @@
 import asyncio
 import datetime as dt
 import hashlib
-import json
 import logging
 import os
 import re
@@ -127,16 +126,10 @@ class Budget:
 
 
 class Radar:
-    def __init__(self, directory, key, transport=None):
-        self.store = Store(directory, key)
+    def __init__(self, directory, key, transport=None, *, remote=None):
+        self.store = Store(directory, key, remote=remote)
         self.api = Providers(self.store, transport)
         self.lock = asyncio.Lock()
-        with self.store.connect(write=True) as db:
-            interrupted = db.execute(
-                "SELECT id,value FROM records WHERE kind='inbox' AND json_extract(value,'$.telegram')='sending'"
-            ).fetchall()
-            for item_id, value in interrupted:
-                Store.write(db, "inbox", item_id, json.loads(value) | {"telegram": "unknown"})
 
     def options(self):
         saved = self.store.get("setting", "monitor")
@@ -188,7 +181,7 @@ class Radar:
         return self.store.inbox(kind, page)
 
     async def collect_page(self, feed, budget, notify_to):
-        saved = self.store.get("feed", feed.key, {})
+        saved = await asyncio.to_thread(self.store.get, "feed", feed.key, {})
         work = saved.get("work")
         if work is None:
             until = int(now().timestamp())
@@ -199,13 +192,15 @@ class Radar:
             body = await feed.read(self.api, budget, work)
         except RadarError as exc:
             if work["cursor"] and exc.status in (400, 404):
-                self.store.put("feed", feed.key, saved | {"work": work | {"cursor": "", "previous": []}})
+                reset = saved | {"work": work | {"cursor": "", "previous": []}}
+                await asyncio.to_thread(self.store.put, "feed", feed.key, reset)
             raise
         if not isinstance(body.get("tweets"), list):
             raise RadarError("فهرست پست‌ها از سورسا دریافت نشد.", 502)
         cursor = next_cursor(body)
         if cursor and (cursor == work["cursor"] or cursor in work["previous"]):
-            self.store.put("feed", feed.key, saved | {"work": work | {"cursor": "", "previous": []}})
+            reset = saved | {"work": work | {"cursor": "", "previous": []}}
+            await asyncio.to_thread(self.store.put, "feed", feed.key, reset)
             raise RadarError("سورسا نشانگر تکراری برای صفحهٔ بعد برگرداند.", 502)
         items, dates, skipped = [], [], 0
         for raw in body["tweets"]:
@@ -233,24 +228,22 @@ class Radar:
             previous = [*work["previous"], work["cursor"]][-16:]
             updated = saved | {"work": work | {"cursor": cursor, "previous": previous}}
 
-        with self.store.connect(write=True) as db:
-            added = sum(Store.write(db, "inbox", item["post"]["id"], item, unique=True) for item in items)
-            Store.write(db, "feed", feed.key, updated)
+        added = await asyncio.to_thread(self.store.record_page, feed.key, items, updated)
         return added, not complete, skipped
 
     async def scan(self):
         if self.lock.locked():
             raise RadarError("یک بررسی در حال اجراست.", 409)
         async with self.lock:
-            options = self.options()
+            options = await asyncio.to_thread(self.options)
             jobs = feeds(options)
             if not jobs:
                 raise RadarError("نام حساب خودت یا لیست SMART را در تنظیمات وارد کن.", 409)
-            if not self.api.key("sorsa"):
+            if not await asyncio.to_thread(self.api.key, "sorsa"):
                 raise RadarError("کلید سورسا را در تنظیمات وارد کن.", 409)
             budget = Budget(self.store, options["daily_limit"])
             notify_to = telegram_owner() if options["telegram_enabled"] else ""
-            rotation = self.store.get("system", "feed_rotation", 0) % len(jobs)
+            rotation = await asyncio.to_thread(self.store.get, "system", "feed_rotation", 0) % len(jobs)
             jobs = jobs[rotation:] + jobs[:rotation]
             status = {"at": now().isoformat(), "new": 0, "errors": [], "pending": len(jobs), "skipped": 0}
             for job in jobs[:SCAN_PAGE_LIMIT]:
@@ -264,9 +257,9 @@ class Radar:
                     if exc.status in (401, 402, 403, 409, 429) or exc.status >= 500:
                         break
                 rotation = (rotation + 1) % len(jobs)
-                self.store.put("system", "feed_rotation", rotation)
+                await asyncio.to_thread(self.store.put, "system", "feed_rotation", rotation)
             status["requests"] = budget.used
-            self.store.put("system", "scan", status)
+            await asyncio.to_thread(self.store.put, "system", "scan", status)
             return status
 
     async def make_draft(self, post):
@@ -277,13 +270,14 @@ class Radar:
         elif post["media"] and len(post["text"].split()) < 5:
             raise RadarError("برای فهم این پست باید تصویر یا ویدئو را دید.", 422)
         else:
-            if time.time() < self.store.get("system", "model_resume", 0):
+            retry_at = await asyncio.to_thread(self.store.get, "system", "model_resume", 0)
+            if time.time() < retry_at:
                 raise RadarError("مدل رایگان موقتاً محدود شده است. بعداً دوباره تلاش کن.", 429)
             try:
                 text = await self.api.generate(post)
             except RadarError as exc:
                 if exc.status == 429:
-                    self.store.put("system", "model_resume", time.time() + MODEL_PAUSE)
+                    await asyncio.to_thread(self.store.put, "system", "model_resume", time.time() + MODEL_PAUSE)
                     raise RadarError("مدل رایگان موقتاً محدود شده است. بعداً دوباره تلاش کن.", 429) from exc
                 raise
         return {"post": post, "text": text, "intent": intent(post["id"], text), "at": now().isoformat()}
@@ -293,26 +287,28 @@ class Radar:
             raise RadarError("صبر کن بررسی جاری تمام شود.", 409)
         async with self.lock:
             item_id = post_id(url)
-            existing = self.store.get("draft", item_id)
+            existing = await asyncio.to_thread(self.store.get, "draft", item_id)
             if existing and not regenerate:
                 return existing
-            item = self.store.get("inbox", item_id)
+            item = await asyncio.to_thread(self.store.get, "inbox", item_id)
             if item or existing:
                 post = (item or existing)["post"]
             else:
-                budget = Budget(self.store, self.options()["daily_limit"])
+                options = await asyncio.to_thread(self.options)
+                budget = Budget(self.store, options["daily_limit"])
                 post = tweet(await self.api.sorsa("/tweet-info", {"tweet_link": item_id}, budget))
                 if post["id"] != item_id:
                     raise RadarError("شناسهٔ پست دریافتی با لینک یکی نیست.", 502)
             draft = await self.make_draft(post)
-            self.store.record_draft(item, draft)
+            await asyncio.to_thread(self.store.record_draft, item, draft)
             return draft
 
     async def deliver(self, item, draft):
         post = item["post"]
         owner = telegram_owner()
-        if not self.options()["telegram_enabled"] or not owner or owner != item["telegram_owner"]:
-            self.store.put("inbox", post["id"], item | {"telegram": "canceled"})
+        options = await asyncio.to_thread(self.options)
+        if not options["telegram_enabled"] or not owner or owner != item["telegram_owner"]:
+            await asyncio.to_thread(self.store.put, "inbox", post["id"], item | {"telegram": "canceled"})
             return
         message = f"{INBOX_TITLES[item['kind']]}\n@{post['author']}\n{post['text'][:750]}\n{post['url']}"
         url, label = post["url"], "مشاهدهٔ پست"
@@ -321,38 +317,45 @@ class Radar:
             url, label = draft["intent"], "باز کردن فرم پاسخ در X"
         elif item.get("draft_error"):
             message += "\n\n" + item["draft_error"]
-        self.store.put("inbox", post["id"], item | {"telegram": "sending"})
+        await asyncio.to_thread(self.store.put, "inbox", post["id"], item | {"telegram": "sending"})
         try:
             await self.api.notify(owner, message, url, label)
-            self.store.put("inbox", post["id"], item | {"telegram": "sent"})
         except RadarError as exc:
-            self.store.put("inbox", post["id"], item | {"telegram": "error", "telegram_error": str(exc)})
+            result = {"telegram": "error", "telegram_error": str(exc)}
+        else:
+            result = {"telegram": "sent"}
+        await asyncio.to_thread(self.store.put, "inbox", post["id"], item | result)
 
     async def process_pending(self):
         if self.lock.locked():
             return
         async with self.lock:
-            for item in self.store.pending(3):
+            for item in await asyncio.to_thread(self.store.pending, 3):
                 post = item["post"]
-                draft = self.store.get("draft", post["id"])
+                draft = await asyncio.to_thread(self.store.get, "draft", post["id"])
                 if item["draft_state"] == "pending":
                     try:
                         draft = draft or await self.make_draft(post)
-                        self.store.record_draft(item, draft)
                     except RadarError as exc:
-                        self.store.record_draft(item, error=str(exc))
+                        await asyncio.to_thread(self.store.record_draft, item, error=str(exc))
+                    else:
+                        await asyncio.to_thread(self.store.record_draft, item, draft)
                 if item["telegram"] == "pending":
                     await self.deliver(item, draft)
+
+    def scheduled_scan_due(self):
+        options = self.options()
+        if not options["scheduled"] or not feeds(options):
+            return False
+        last = self.store.get("system", "scheduled_at", 0)
+        return (time.time() - last >= options["interval"] * 60
+                and self.used_today() < options["daily_limit"] and bool(self.api.key("sorsa")))
 
     async def loop(self):
         while True:
             try:
-                options = self.options()
-                last = self.store.get("system", "scheduled_at", 0)
-                if (options["scheduled"] and not self.lock.locked() and feeds(options)
-                        and self.used_today() < options["daily_limit"]
-                        and time.time() - last >= options["interval"] * 60 and self.api.key("sorsa")):
-                    self.store.put("system", "scheduled_at", time.time())
+                if not self.lock.locked() and await asyncio.to_thread(self.scheduled_scan_due):
+                    await asyncio.to_thread(self.store.put, "system", "scheduled_at", time.time())
                     await self.scan()
                 await self.process_pending()
             except RadarError as exc:

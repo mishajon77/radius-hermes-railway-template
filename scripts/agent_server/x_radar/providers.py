@@ -1,4 +1,5 @@
 """Read public X data and generate drafts without X write credentials."""
+import asyncio
 import os
 import re
 from urllib.parse import urlencode, urlsplit
@@ -128,16 +129,16 @@ class Providers:
         return body
 
     async def sorsa(self, path, args, budget):
-        key = self.key("sorsa")
+        key = await asyncio.to_thread(self.key, "sorsa")
         if not key:
             raise RadarError("کلید سورسا را در تنظیمات وارد کن.", 409)
         method = SORSA_METHODS[path]
-        budget.spend()
+        await asyncio.to_thread(budget.spend)
         data = {"params": args} if method == "GET" else {"json": args}
         return await self.json(method, SORSA_BASE + path, "سورسا", headers={"ApiKey": key}, **data)
 
     async def generate(self, post):
-        key = self.key("openrouter")
+        key = await asyncio.to_thread(self.key, "openrouter")
         if not key:
             raise RadarError("برای ساخت پیش‌نویس، کلید OpenRouter را در تنظیمات وارد کن.", 409)
         instructions = (
@@ -170,7 +171,7 @@ class Providers:
         return result
 
     async def notify(self, chat_id, text, url, label):
-        token = self.key("telegram")
+        token = await asyncio.to_thread(self.key, "telegram")
         if not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]+", token):
             raise RadarError("توکن بات تلگرام در تنظیمات سرویس معتبر نیست.", 409)
         data = {

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from .radar import DEFAULTS, INBOX_TITLES, Radar
 from .store import RadarError
+from .turso import TursoDatabase
 
 
 COOKIE = "agant_radar_session"
@@ -188,14 +189,16 @@ def create_app(radar, secret, secure=True):
             return {"text": f"پیش‌نویس پاسخ\\n{result['text']}\\n\\n{result['post']['url']}\\n{result['intent']}"}
         if command == "alerts":
             lines = []
-            for item in radar.inbox()["rows"][:4]:
+            inbox = await asyncio.to_thread(radar.inbox)
+            for item in inbox["rows"][:4]:
                 post, draft = item["post"], item["draft"]
                 entry = f"{INBOX_TITLES[item['kind']]} · @{post['author']}\\n{post['url']}"
                 if draft:
                     entry += f"\\n{draft['text']}\\n{draft['intent']}"
                 lines.append(entry)
             return {"text": "\\n\\n".join(lines) or "مورد تازه‌ای در داشبورد ثبت نشده است."}
-        url = radar.options()["public_url"]
+        options = await asyncio.to_thread(radar.options)
+        url = options["public_url"]
         address = url.rstrip("/") + "/" if url else "آدرس HTTPS را در تنظیمات ثبت کن."
         return {"text": (
             f"رادار ایکس\\nداشبورد {address}\\n\\n"
@@ -208,16 +211,23 @@ def create_app(radar, secret, secure=True):
 def install(parent):
     key = os.getenv("AGANT_X_RADAR_KEY", "").strip()
     directory = os.getenv("AGANT_X_RADAR_DATA_DIR", "").strip()
-    if not key and not directory:
+    url = os.getenv("AGANT_X_RADAR_TURSO_URL", "").strip()
+    token = os.getenv("AGANT_X_RADAR_TURSO_TOKEN", "").strip()
+    use_turso = bool(url or token)
+    if not any((key, directory, use_turso)):
         return None
     if (len(key) < 24 or not key.isascii() or any(c.isspace() for c in key)
-            or not directory or not Path(directory).is_absolute()):
-        LOGGER.warning("X radar disabled: configure its key and absolute data directory")
+            or (not use_turso and (not directory or not Path(directory).is_absolute()))):
+        LOGGER.warning("X radar disabled: configure its key and a volume path or Turso database")
         return None
+    remote = None
     try:
-        radar = Radar(directory, key)
+        remote = TursoDatabase(url, token) if use_turso else None
+        radar = Radar(directory, key, remote=remote)
     except (OSError, ValueError, ImportError, sqlite3.Error) as exc:
-        LOGGER.warning("X radar disabled: data directory is not writable (%s)", type(exc).__name__)
+        if remote is not None:
+            remote.close()
+        LOGGER.warning("X radar disabled: invalid database configuration (%s)", type(exc).__name__)
         return None
     parent.mount("/x-radar", create_app(radar, key))
     return radar
@@ -230,3 +240,4 @@ async def shutdown(radar, task):
             await task
     if radar:
         await radar.api.client.aclose()
+        await asyncio.to_thread(radar.store.close)
