@@ -192,6 +192,9 @@ def test_private_settings_accept_handles_and_have_two_pages(tmp_path, monkeypatc
         assert client.get("/x-radar/api/inbox").status_code == 401
         assert client.post("/x-radar/api/login", json={"password": KEY}).status_code == 403
         assert client.post("/x-radar/api/login", headers=HEADERS, json={"password": KEY}).status_code == 200
+        options = client.get("/x-radar/api/state").json()["options"]
+        assert options["interval"] == 180
+        assert options["scheduled"] is False
         assert client.post("/x-radar/api/options", json={"owner": "owner"}).status_code == 403
         saved = client.post("/x-radar/api/options", headers=HEADERS, json={
             "owner": "@Owner", "smart_handles": "@Alpha، https://x.com/Beta\nalpha",

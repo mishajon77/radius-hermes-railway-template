@@ -17,7 +17,7 @@ from .store import RadarError, Store
 logger = logging.getLogger(__name__)
 DEFAULTS = {
     "owner": "", "public_url": "", "smart_list": "", "smart_handles": [],
-    "scheduled": False, "interval": 30, "daily_limit": 100, "telegram_enabled": False,
+    "scheduled": False, "interval": 180, "daily_limit": 100, "telegram_enabled": False,
 }
 SMART_BATCH_SIZE = 12
 SCAN_PAGE_LIMIT = 12
